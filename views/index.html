@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WeatherApp</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --sun1: #f5a700;
+      --sun2: #f97316;
+      --sun3: #fde68a;
+      --bg: #fff8e7;
+      --bg2: #fff3cc;
+      --surface: rgba(255,255,255,0.75);
+      --surface2: rgba(255,247,220,0.9);
+      --border: rgba(245,167,0,0.22);
+      --text: #3a2800;
+      --muted: #a07830;
+      --error: #dc2626;
+      --radius: 24px;
+    }
+
+    body {
+      background: linear-gradient(160deg, #fff8e1 0%, #ffe9a0 50%, #ffd166 100%);
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 50px 20px 60px;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Sol animado de verdade no canto */
+    .sun-widget {
+      position: fixed;
+      top: -80px;
+      right: -80px;
+      width: 260px;
+      height: 260px;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* Círculo do sol pulsando */
+    .sun-core {
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 110px; height: 110px;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: radial-gradient(circle at 38% 38%, #ffe066, #f5a700 60%, #f97316);
+      box-shadow:
+        0 0 30px 10px rgba(245,167,0,0.45),
+        0 0 70px 25px rgba(249,115,22,0.2);
+      animation: pulse-core 3s ease-in-out infinite;
+    }
+
+    @keyframes pulse-core {
+      0%, 100% { transform: translate(-50%, -50%) scale(1);    box-shadow: 0 0 30px 10px rgba(245,167,0,0.45), 0 0 70px 25px rgba(249,115,22,0.2); }
+      50%       { transform: translate(-50%, -50%) scale(1.07); box-shadow: 0 0 45px 18px rgba(245,167,0,0.55), 0 0 90px 35px rgba(249,115,22,0.28); }
+    }
+
+    /* Raios girando junto com o sol (tudo gira) */
+    .sun-spinner {
+      position: absolute;
+      inset: 0;
+      animation: spin-rays 10s linear infinite;
+    }
+
+    .sun-ray {
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 6px;
+      border-radius: 3px;
+      background: linear-gradient(to top, rgba(245,167,0,0.15), #f5a700);
+      transform-origin: 50% 100%;
+    }
+
+    /* 12 raios em volta */
+    .sun-ray:nth-child(1)  { height: 38px; transform: translate(-50%, -100%) rotate(0deg)   translateY(-62px); }
+    .sun-ray:nth-child(2)  { height: 30px; transform: translate(-50%, -100%) rotate(30deg)  translateY(-62px); }
+    .sun-ray:nth-child(3)  { height: 38px; transform: translate(-50%, -100%) rotate(60deg)  translateY(-62px); }
+    .sun-ray:nth-child(4)  { height: 30px; transform: translate(-50%, -100%) rotate(90deg)  translateY(-62px); }
+    .sun-ray:nth-child(5)  { height: 38px; transform: translate(-50%, -100%) rotate(120deg) translateY(-62px); }
+    .sun-ray:nth-child(6)  { height: 30px; transform: translate(-50%, -100%) rotate(150deg) translateY(-62px); }
+    .sun-ray:nth-child(7)  { height: 38px; transform: translate(-50%, -100%) rotate(180deg) translateY(-62px); }
+    .sun-ray:nth-child(8)  { height: 30px; transform: translate(-50%, -100%) rotate(210deg) translateY(-62px); }
+    .sun-ray:nth-child(9)  { height: 38px; transform: translate(-50%, -100%) rotate(240deg) translateY(-62px); }
+    .sun-ray:nth-child(10) { height: 30px; transform: translate(-50%, -100%) rotate(270deg) translateY(-62px); }
+    .sun-ray:nth-child(11) { height: 38px; transform: translate(-50%, -100%) rotate(300deg) translateY(-62px); }
+    .sun-ray:nth-child(12) { height: 30px; transform: translate(-50%, -100%) rotate(330deg) translateY(-62px); }
+
+    @keyframes spin-rays { to { transform: rotate(360deg); } }
+
+    /* Brilho ao redor do sol */
+    .sun-glow {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: radial-gradient(circle at center, rgba(255,220,80,0.35) 0%, transparent 70%);
+      animation: pulse-glow 3s ease-in-out infinite;
+    }
+    @keyframes pulse-glow {
+      0%, 100% { opacity: 0.7; transform: scale(1);    }
+      50%       { opacity: 1;   transform: scale(1.12); }
+    }
+
+    .wrapper {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 540px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 26px;
+    }
+
+    header { text-align: center; animation: fadeDown 0.6s ease both; }
+    header h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2.4rem, 7vw, 3.4rem);
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #c47a00, #f97316);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1;
+    }
+    header p {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-top: 8px;
+      font-weight: 300;
+    }
+
+    /* Search */
+    .search-box {
+      width: 100%;
+      display: flex;
+      gap: 10px;
+      animation: fadeDown 0.6s 0.1s ease both;
+    }
+    .search-box input {
+      flex: 1;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 15px 22px;
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.25s, box-shadow 0.25s;
+      backdrop-filter: blur(8px);
+    }
+    .search-box input::placeholder { color: #c8a060; }
+    .search-box input:focus {
+      border-color: var(--sun1);
+      box-shadow: 0 0 0 3px rgba(245,167,0,0.18);
+    }
+    .search-box button {
+      background: linear-gradient(135deg, var(--sun1), var(--sun2));
+      border: none;
+      border-radius: var(--radius);
+      padding: 15px 26px;
+      color: #fff;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.2s, opacity 0.2s;
+      white-space: nowrap;
+      box-shadow: 0 4px 18px rgba(249,115,22,0.4);
+    }
+    .search-box button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 28px rgba(249,115,22,0.5);
+    }
+    .search-box button:active { transform: translateY(0); }
+    .search-box button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+    .loader {
+      display: none;
+      width: 38px; height: 38px;
+      border: 3px solid rgba(245,167,0,0.25);
+      border-top-color: var(--sun1);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    .error-msg {
+      display: none;
+      width: 100%;
+      background: rgba(220,38,38,0.07);
+      border: 1px solid rgba(220,38,38,0.22);
+      border-radius: var(--radius);
+      padding: 14px 22px;
+      color: var(--error);
+      font-size: 0.9rem;
+      text-align: center;
+      animation: fadeDown 0.3s ease both;
+    }
+
+    /* Card */
+    .weather-card {
+      display: none;
+      width: 100%;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      animation: fadeUp 0.45s ease both;
+      box-shadow: 0 12px 50px rgba(245,167,0,0.15), 0 2px 8px rgba(0,0,0,0.06);
+      backdrop-filter: blur(12px);
+    }
+
+    .card-hero {
+      background: linear-gradient(135deg, rgba(255,220,80,0.35) 0%, rgba(249,115,22,0.12) 100%);
+      border-bottom: 1.5px solid var(--border);
+      padding: 30px 28px 26px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+    }
+
+    .hero-left h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 2rem;
+      font-weight: 700;
+      color: #2d1a00;
+    }
+    .hero-left .country {
+      font-size: 0.78rem;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-top: 5px;
+    }
+    .hero-left .badge {
+      display: inline-block;
+      margin-top: 10px;
+      background: rgba(245,167,0,0.15);
+      border: 1px solid rgba(245,167,0,0.3);
+      border-radius: 20px;
+      padding: 4px 14px;
+      font-size: 0.8rem;
+      color: #b45309;
+      text-transform: capitalize;
+      font-weight: 500;
+    }
+
+    .hero-right { text-align: right; flex-shrink: 0; }
+    .hero-right img {
+      width: 88px; height: 88px;
+      filter: drop-shadow(0 4px 12px rgba(245,167,0,0.4));
+      animation: float 4s ease-in-out infinite;
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50%       { transform: translateY(-6px); }
+    }
+    .temp-big {
+      font-family: 'Playfair Display', serif;
+      font-size: 4rem;
+      font-weight: 900;
+      line-height: 1;
+      color: #c47a00;
+    }
+    .temp-big sup { font-size: 0.35em; vertical-align: super; color: var(--muted); }
+
+    .card-stats {
+      padding: 22px 24px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .stat {
+      background: rgba(255,255,255,0.6);
+      border: 1.5px solid rgba(245,167,0,0.18);
+      border-radius: 18px;
+      padding: 18px 12px;
+      text-align: center;
+      transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+      cursor: default;
+    }
+    .stat:hover {
+      background: rgba(255,220,80,0.25);
+      transform: translateY(-3px);
+      box-shadow: 0 6px 20px rgba(245,167,0,0.15);
+    }
+    .stat-icon { font-size: 1.5rem; margin-bottom: 8px; display: block; }
+    .stat-label {
+      font-size: 0.67rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 500;
+      margin-bottom: 6px;
+    }
+    .stat-value {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.55rem;
+      font-weight: 700;
+      color: #b45309;
+      line-height: 1;
+    }
+    .stat-unit {
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.75rem;
+      color: var(--muted);
+      font-weight: 300;
+    }
+
+    .card-footer {
+      border-top: 1.5px solid var(--border);
+      padding: 12px 28px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,247,220,0.5);
+    }
+    .card-footer span { font-size: 0.75rem; color: var(--muted); }
+    .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--sun1);
+      box-shadow: 0 0 6px var(--sun1);
+      flex-shrink: 0;
+      animation: blink 2s ease-in-out infinite;
+    }
+
+    @keyframes spin     { to { transform: rotate(360deg); } }
+    @keyframes blink    { 0%,100%{opacity:1}50%{opacity:0.3} }
+    @keyframes fadeDown { from{opacity:0;transform:translateY(-16px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes fadeUp   { from{opacity:0;transform:translateY(20px)}  to{opacity:1;transform:translateY(0)} }
+
+    @media (max-width: 420px) {
+      .search-box { flex-direction: column; }
+      .card-stats  { grid-template-columns: 1fr 1fr; }
+      .temp-big    { font-size: 3rem; }
+      .sun-widget  { width: 180px; height: 180px; top: -60px; right: -60px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sol decorativo animado -->
+  <div class="sun-widget">
+    <div class="sun-glow"></div>
+    <div class="sun-spinner">
+      <div class="sun-ray"></div><div class="sun-ray"></div>
+      <div class="sun-ray"></div><div class="sun-ray"></div>
+      <div class="sun-ray"></div><div class="sun-ray"></div>
+      <div class="sun-ray"></div><div class="sun-ray"></div>
+      <div class="sun-ray"></div><div class="sun-ray"></div>
+      <div class="sun-ray"></div><div class="sun-ray"></div>
+    </div>
+    <div class="sun-core"></div>
+  </div>
+
+  <div class="wrapper">
+
+    <header>
+      <h1>☀ WeatherApp</h1>
+      <p>Consulte o clima de qualquer cidade em tempo real</p>
+    </header>
+
+    <div class="search-box">
+      <input
+        type="text"
+        id="cityInput"
+        placeholder="Nome da cidade..."
+        autocomplete="off"
+      />
+      <button id="searchBtn" onclick="searchWeather()">Buscar</button>
+    </div>
+
+    <div class="loader" id="loader"></div>
+    <div class="error-msg" id="errorMsg"></div>
+
+    <div class="weather-card" id="weatherCard">
+
+      <div class="card-hero">
+        <div class="hero-left">
+          <h2 id="cityName">—</h2>
+          <div class="country" id="countryName">—</div>
+          <div class="badge" id="description">—</div>
+        </div>
+        <div class="hero-right">
+          <img id="weatherIcon" src="" alt="ícone" />
+          <div class="temp-big"><span id="temp">—</span><sup>°C</sup></div>
+        </div>
+      </div>
+
+      <div class="card-stats">
+        <div class="stat">
+          <span class="stat-icon">🌡️</span>
+          <div class="stat-label">Sensação</div>
+          <div class="stat-value"><span id="feelsLike">—</span><span class="stat-unit"> °C</span></div>
+        </div>
+        <div class="stat">
+          <span class="stat-icon">💧</span>
+          <div class="stat-label">Umidade</div>
+          <div class="stat-value"><span id="humidity">—</span><span class="stat-unit"> %</span></div>
+        </div>
+        <div class="stat">
+          <span class="stat-icon">🌤️</span>
+          <div class="stat-label">Condição</div>
+          <div class="stat-value" id="condition" style="font-size:0.85rem;font-family:'Outfit',sans-serif;font-weight:600;text-transform:capitalize;">—</div>
+        </div>
+      </div>
+
+      <div class="card-footer">
+        <div class="dot"></div>
+        <span>Dados em tempo real via OpenWeatherMap</span>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    const input    = document.getElementById('cityInput');
+    const btn      = document.getElementById('searchBtn');
+    const loader   = document.getElementById('loader');
+    const errorMsg = document.getElementById('errorMsg');
+    const card     = document.getElementById('weatherCard');
+
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') searchWeather(); });
+
+    function showError(msg) {
+      card.style.display = 'none';
+      errorMsg.textContent = msg;
+      errorMsg.style.display = 'block';
+    }
+
+    function hideAll() {
+      errorMsg.style.display = 'none';
+      card.style.display = 'none';
+    }
+
+    async function searchWeather() {
+      const city = input.value.trim();
+      if (!city) { showError('Por favor, informe o nome de uma cidade.'); return; }
+
+      hideAll();
+      loader.style.display = 'block';
+      btn.disabled = true;
+
+      try {
+        const res  = await fetch(`/api/weather?city=${encodeURIComponent(city)}`);
+        const data = await res.json();
+
+        if (!res.ok) { showError(data.error || 'Erro ao buscar dados do clima.'); return; }
+
+        document.getElementById('cityName').textContent    = data.city;
+        document.getElementById('countryName').textContent = data.country;
+        document.getElementById('temp').textContent        = data.temperature;
+        document.getElementById('feelsLike').textContent   = data.feelsLike;
+        document.getElementById('humidity').textContent    = data.humidity;
+        document.getElementById('description').textContent = data.description;
+        document.getElementById('condition').textContent   = data.description;
+
+        const icon = document.getElementById('weatherIcon');
+        icon.src = `https://openweathermap.org/img/wn/${data.icon}@2x.png`;
+        icon.alt  = data.description;
+
+        card.style.display = 'block';
+
+      } catch {
+        showError('Não foi possível conectar ao servidor.');
+      } finally {
+        loader.style.display = 'none';
+        btn.disabled = false;
+      }
+    }
+  </script>
+</body>
+</html>
